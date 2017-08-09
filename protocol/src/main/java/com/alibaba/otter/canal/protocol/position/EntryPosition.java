@@ -2,7 +2,7 @@ package com.alibaba.otter.canal.protocol.position;
 
 /**
  * 数据库对象的唯一标示
- * 
+ *
  * @author jianghang 2012-6-14 下午09:20:07
  * @version 1.0.0
  */
@@ -17,6 +17,11 @@ public class EntryPosition extends TimePosition {
     private Long              position;
     // add by agapple at 2016-06-28
     private Long              serverId              = null;              // 记录一下位点对应的serverId
+
+    /* GTID info **/
+    private String 			  serverUUID;
+    private Long  		      transcationId;
+    private String 			  lastGtidInterval;
 
     public EntryPosition(){
         super(null);
@@ -73,6 +78,30 @@ public class EntryPosition extends TimePosition {
         this.serverId = serverId;
     }
 
+    public String getServerUUID() {
+        return serverUUID;
+    }
+
+    public void setServerUUID(String serverUUID) {
+        this.serverUUID = serverUUID;
+    }
+
+    public Long getTranscationId() {
+        return transcationId;
+    }
+
+    public void setTranscationId(Long transcationId) {
+        this.transcationId = transcationId;
+    }
+
+    public String getLastGtidInterval() {
+        return lastGtidInterval;
+    }
+
+    public void setLastGtidInterval(String lastGtidInterval) {
+        this.lastGtidInterval = lastGtidInterval;
+    }
+
     @Override
     public int hashCode() {
         final int prime = 31;
@@ -81,6 +110,12 @@ public class EntryPosition extends TimePosition {
         result = prime * result + ((position == null) ? 0 : position.hashCode());
         // 手写equals，自动生成时需注意
         result = prime * result + ((timestamp == null) ? 0 : timestamp.hashCode());
+        // GTID
+        // 手写equals，自动生成时需注意
+        result = prime * result + ((serverUUID == null) ? 0 : serverUUID.hashCode());
+        result = prime * result + ((transcationId == null) ? 0 : transcationId.hashCode());
+        result = prime * result + ((lastGtidInterval == null) ? 0 : lastGtidInterval.hashCode());
+
         return result;
     }
 
@@ -118,7 +153,32 @@ public class EntryPosition extends TimePosition {
         } else if (!timestamp.equals(other.timestamp)) {
             return false;
         }
+
+        // GTID
+        if (serverUUID == null) {
+            if (other.serverUUID != null) {
+                return false;
+            }
+        } else if (!serverUUID.equals(other.serverUUID)) {
+            return false;
+        }
+
+        if (transcationId == null) {
+            if (other.transcationId != null) {
+                return false;
+            }
+        } else if (!transcationId.equals(other.transcationId)) {
+            return false;
+        }
+
+        if (lastGtidInterval == null) {
+            if (other.lastGtidInterval != null) {
+                return false;
+            }
+        } else if (!lastGtidInterval.equals(other.lastGtidInterval)) {
+            return false;
+        }
+
         return true;
     }
-
 }

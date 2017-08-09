@@ -404,4 +404,8 @@ public abstract class LogEvent {
         return header.getWhen();
     }
 
+    public void fillGtidInfo(LogContext context){
+        this.header.fillGtidInfo(context);
+    }
+
 }

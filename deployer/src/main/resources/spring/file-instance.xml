@@ -64,7 +64,7 @@
 		<property name="batchMode" value="${canal.instance.memory.batch.mode:MEMSIZE}" />
 		<property name="ddlIsolation" value="${canal.instance.get.ddl.isolation:false}" />
 	</bean>
-	
+
 	<bean id="eventSink" class="com.alibaba.otter.canal.sink.entry.EntryEventSink">
 		<property name="eventStore" ref="eventStore" />
 	</bean>
@@ -111,16 +111,32 @@
 		<property name="connectionCharset" value="${canal.instance.connectionCharset:UTF-8}" />
 	
 		<!-- 解析位点记录 -->
+		<!--<property name="logPositionManager">-->
+			<!--<bean class="com.alibaba.otter.canal.parse.index.FailbackLogPositionManager">-->
+				<!--<constructor-arg>-->
+					<!--<bean class="com.alibaba.otter.canal.parse.index.MemoryLogPositionManager" />-->
+				<!--</constructor-arg>-->
+				<!--<constructor-arg>-->
+					<!--<bean class="com.alibaba.otter.canal.parse.index.MetaLogPositionManager">-->
+						<!--<constructor-arg ref="metaManager"/>-->
+					<!--</bean>-->
+				<!--</constructor-arg>-->
+			<!--</bean>-->
+		<!--</property>-->
+
 		<property name="logPositionManager">
-			<bean class="com.alibaba.otter.canal.parse.index.FailbackLogPositionManager">
+			<bean class="com.alibaba.otter.canal.parse.index.FileMixedLogPositionManager">
+				<!--<property name="dataDir" value="/home/leo/vdp/canal/" />-->
+				<!--<property name="period" value="1000" />-->
+				<!--<property name="memoryLogPositionManager">-->
+					<!--<ref local="memorLPManager" />-->
+				<!--</property>-->
+				<constructor-arg index="0" value="/home/leo/vdp/canal/" />
+				<constructor-arg index="1" value="1000" />
 				<constructor-arg>
 					<bean class="com.alibaba.otter.canal.parse.index.MemoryLogPositionManager" />
 				</constructor-arg>
-				<constructor-arg>
-					<bean class="com.alibaba.otter.canal.parse.index.MetaLogPositionManager">
-						<constructor-arg ref="metaManager"/>
-					</bean>
-				</constructor-arg>
+
 			</bean>
 		</property>
 		

@@ -150,7 +150,7 @@ public class CanalController {
                                         initCid(path);
                                     }
 
-                                    @Override
+//                                    @Override
                                     public void handleSessionEstablishmentError(Throwable error) throws Exception {
                                         logger.error("failed to connect to zookeeper", error);
                                     }
@@ -389,7 +389,7 @@ public class CanalController {
                     initCid(path);
                 }
 
-                @Override
+//                @Override
                 public void handleSessionEstablishmentError(Throwable error) throws Exception {
                     logger.error("failed to connect to zookeeper", error);
                 }

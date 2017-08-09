@@ -2,6 +2,10 @@ package com.taobao.tddl.dbsync.binlog.event;
 
 import com.taobao.tddl.dbsync.binlog.LogBuffer;
 import com.taobao.tddl.dbsync.binlog.LogEvent;
+import com.taobao.tddl.dbsync.binlog.LogGtidUtil;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
  * @author jianghang 2013-4-8 上午12:36:29
@@ -16,6 +20,8 @@ public class GtidLogEvent extends LogEvent {
     public static final int ENCODED_SID_LENGTH  = 16;
 
     private boolean         commitFlag;
+    private String          serverUUID;
+    private long            transcationId;
 
     public GtidLogEvent(LogHeader header, LogBuffer buffer, FormatDescriptionLogEvent descriptionEvent){
         super(header);
@@ -36,10 +42,23 @@ public class GtidLogEvent extends LogEvent {
         //
         // spec.gtid.gno= uint8korr(ptr_buffer);
         // ptr_buffer+= ENCODED_GNO_LENGTH;
+
+//        this.serverUUID    = buffer.getFixString(16);
+        this.serverUUID    = LogGtidUtil.formatUUID(buffer.getData(16));
+        this.transcationId = buffer.getLong64();
+
+        //crc
     }
 
     public boolean isCommitFlag() {
         return commitFlag;
     }
 
+    public long getTranscationId() {
+        return transcationId;
+    }
+
+    public String getServerUUID() {
+        return serverUUID;
+    }
 }

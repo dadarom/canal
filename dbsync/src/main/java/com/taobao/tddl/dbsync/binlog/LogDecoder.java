@@ -154,12 +154,17 @@ public final class LogDecoder {
                 QueryLogEvent event = new QueryLogEvent(header, buffer, descriptionEvent);
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
+
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.XID_EVENT: {
                 XidLogEvent event = new XidLogEvent(header, buffer, descriptionEvent);
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
+
+                event.fillGtidInfo(context);
+                context.lastGTID = null;
                 return event;
             }
             case LogEvent.TABLE_MAP_EVENT: {
@@ -174,6 +179,7 @@ public final class LogDecoder {
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
                 event.fillTable(context);
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.UPDATE_ROWS_EVENT_V1: {
@@ -181,6 +187,7 @@ public final class LogDecoder {
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
                 event.fillTable(context);
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.DELETE_ROWS_EVENT_V1: {
@@ -188,6 +195,7 @@ public final class LogDecoder {
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
                 event.fillTable(context);
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.ROTATE_EVENT: {
@@ -332,6 +340,7 @@ public final class LogDecoder {
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
                 event.fillTable(context);
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.UPDATE_ROWS_EVENT: {
@@ -339,6 +348,7 @@ public final class LogDecoder {
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
                 event.fillTable(context);
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.DELETE_ROWS_EVENT: {
@@ -346,6 +356,7 @@ public final class LogDecoder {
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
                 event.fillTable(context);
+                event.fillGtidInfo(context);
                 return event;
             }
             case LogEvent.GTID_LOG_EVENT:
@@ -353,12 +364,21 @@ public final class LogDecoder {
                 GtidLogEvent event = new GtidLogEvent(header, buffer, descriptionEvent);
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
+
+                //gtid info
+                context.lastGTID = event;
+                logPosition.serverUUID    = event.getServerUUID();
+                logPosition.transcationId = event.getTranscationId();
+
                 return event;
             }
             case LogEvent.PREVIOUS_GTIDS_LOG_EVENT: {
                 PreviousGtidsLogEvent event = new PreviousGtidsLogEvent(header, buffer, descriptionEvent);
                 /* updating position in context */
                 logPosition.position = header.getLogPos();
+
+                //previous gtids
+                context.lastPreviousGtids    = event;
                 return event;
             }
             case LogEvent.ANNOTATE_ROWS_EVENT: {

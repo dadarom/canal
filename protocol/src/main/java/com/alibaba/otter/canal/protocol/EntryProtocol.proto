@@ -55,7 +55,13 @@ message Header {
 	optional EventType 				eventType			= 11 [default = UPDATE];
 	
 	/**预留扩展**/
-	repeated Pair					props				= 12;		
+	repeated Pair					props				= 12;
+
+	/**master srever uuid**/
+	optional string 				serverUUID    		= 13;
+
+	/**transcation id in GTID: gloable transcation id**/
+	optional int64  				transcationId 		= 14;
 }
 
 /**每个字段的数据结构**/
@@ -169,7 +175,7 @@ enum EntryType{
 	ROWDATA					=		2;
 	TRANSACTIONEND			=		3;
 	/** 心跳类型，内部使用，外部暂不可见，可忽略 **/
-	HEARTBEAT				=		4; 
+	HEARTBEAT				=		4;
 }
 
 /** 事件类型 **/

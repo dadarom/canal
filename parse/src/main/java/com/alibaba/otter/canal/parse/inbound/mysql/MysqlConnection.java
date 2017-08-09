@@ -3,8 +3,11 @@ package com.alibaba.otter.canal.parse.inbound.mysql;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 
+import com.alibaba.otter.canal.parse.driver.mysql.packets.client.BinlogDumpGtidCommandPacket;
+import com.taobao.tddl.dbsync.binlog.event.PreviousGtidsLogEvent;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
@@ -27,23 +30,23 @@ import com.taobao.tddl.dbsync.binlog.LogEvent;
 
 public class MysqlConnection implements ErosaConnection {
 
-    private static final Logger logger  = LoggerFactory.getLogger(MysqlConnection.class);
+    private static final Logger logger = LoggerFactory.getLogger(MysqlConnection.class);
 
-    private MysqlConnector      connector;
-    private long                slaveId;
-    private Charset             charset = Charset.forName("UTF-8");
-    private BinlogFormat        binlogFormat;
-    private BinlogImage         binlogImage;
+    private MysqlConnector connector;
+    private long           slaveId;
+    private Charset charset = Charset.forName("UTF-8");
+    private BinlogFormat binlogFormat;
+    private BinlogImage  binlogImage;
 
-    public MysqlConnection(){
+    public MysqlConnection() {
     }
 
-    public MysqlConnection(InetSocketAddress address, String username, String password){
+    public MysqlConnection(InetSocketAddress address, String username, String password) {
         connector = new MysqlConnector(address, username, password);
     }
 
     public MysqlConnection(InetSocketAddress address, String username, String password, byte charsetNumber,
-                           String defaultSchema){
+                           String defaultSchema) {
         connector = new MysqlConnector(address, username, password, charsetNumber, defaultSchema);
     }
 
@@ -123,6 +126,35 @@ public class MysqlConnection implements ErosaConnection {
         }
     }
 
+    public void dump(String binlogfilename, Long binlogPosition, String masterUUID, long transcationId,
+                             String gtidInterval, SinkFunction func) throws IOException {
+        updateSettings();
+        sendGtidBinlogDump(binlogfilename, binlogPosition, masterUUID, transcationId, gtidInterval);
+
+        DirectLogFetcher fetcher = new DirectLogFetcher(connector.getReceiveBufferSize());
+        fetcher.start(connector.getChannel());
+        LogDecoder decoder = new LogDecoder(LogEvent.UNKNOWN_EVENT, LogEvent.ENUM_END_EVENT);
+        LogContext context = new LogContext();
+
+        // init PreviousGtidsLogEvent
+        PreviousGtidsLogEvent previousEvent = new PreviousGtidsLogEvent(null);
+        previousEvent.cachePreviousGtidStr(masterUUID, gtidInterval);
+        context.setLastPreviousGtids(previousEvent);
+
+        while (fetcher.fetch()) {
+            LogEvent event = null;
+            event = decoder.decode(fetcher, context);
+
+            if (event == null) {
+                throw new CanalParseException("parse failed");
+            }
+
+            if (!func.sink(event)) {
+                break;
+            }
+        }
+    }
+
     public void dump(long timestamp, SinkFunction func) throws IOException {
         throw new NullPointerException("Not implement yet");
     }
@@ -135,6 +167,28 @@ public class MysqlConnection implements ErosaConnection {
         byte[] cmdBody = binlogDumpCmd.toBytes();
 
         logger.info("COM_BINLOG_DUMP with position:{}", binlogDumpCmd);
+        HeaderPacket binlogDumpHeader = new HeaderPacket();
+        binlogDumpHeader.setPacketBodyLength(cmdBody.length);
+        binlogDumpHeader.setPacketSequenceNumber((byte) 0x00);
+        PacketManager.writePkg(connector.getChannel(), binlogDumpHeader.toBytes(), cmdBody);
+        connector.setDumping(true);
+    }
+
+    private void sendGtidBinlogDump(String binlogfilename, Long binlogPosition, String masterUUID, long transcationId,
+                                    String gtidInterval) throws IOException {
+        BinlogDumpGtidCommandPacket packet = new BinlogDumpGtidCommandPacket();
+//        packet.binlogFileName = binlogfilename;
+        packet.binlogFileName = "";//just GTID info to be ready
+        packet.binlogPosition = binlogPosition;
+        packet.slaveServerId = this.slaveId;
+
+        //GTID
+        packet.masterServerUUID = masterUUID;
+        packet.lastTransactionId = transcationId;
+        packet.gtidInterval = gtidInterval;
+
+        byte[] cmdBody = packet.toBytes();
+        logger.info("COM_BINLOG_DUMP_GTID with position:{}", packet);
         HeaderPacket binlogDumpHeader = new HeaderPacket();
         binlogDumpHeader.setPacketBodyLength(cmdBody.length);
         binlogDumpHeader.setPacketSequenceNumber((byte) 0x00);
@@ -159,7 +213,7 @@ public class MysqlConnection implements ErosaConnection {
      * <li>net_write_timeout</li>
      * <li>net_read_timeout</li>
      * </ol>
-     * 
+     *
      * @param channel
      * @throws IOException
      */
@@ -229,7 +283,8 @@ public class MysqlConnection implements ErosaConnection {
 
         List<String> columnValues = rs.getFieldValues();
         if (columnValues == null || columnValues.size() != 2) {
-            logger.warn("unexpected binlog format query result, this may cause unexpected result, so throw exception to request network to io shutdown.");
+            logger.warn(
+                    "unexpected binlog format query result, this may cause unexpected result, so throw exception to request network to io shutdown.");
             throw new IllegalStateException("unexpected binlog format query result:" + rs.getFieldValues());
         }
 
@@ -281,7 +336,7 @@ public class MysqlConnection implements ErosaConnection {
 
         private String value;
 
-        private BinlogFormat(String value){
+        private BinlogFormat(String value) {
             this.value = value;
         }
 
@@ -299,7 +354,7 @@ public class MysqlConnection implements ErosaConnection {
     /**
      * http://dev.mysql.com/doc/refman/5.6/en/replication-options-binary-log.
      * html#sysvar_binlog_row_image
-     * 
+     *
      * @author agapple 2015年6月29日 下午10:39:03
      * @since 1.0.20
      */
@@ -321,7 +376,7 @@ public class MysqlConnection implements ErosaConnection {
 
         private String value;
 
-        private BinlogImage(String value){
+        private BinlogImage(String value) {
             this.value = value;
         }
 

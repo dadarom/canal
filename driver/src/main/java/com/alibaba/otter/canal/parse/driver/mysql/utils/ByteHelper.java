@@ -116,6 +116,13 @@ public abstract class ByteHelper {
         out.write((byte) (data >>> 24));
     }
 
+    // little-endian format.
+    public static void writeUnsignedLittleEndian(long data,int len, ByteArrayOutputStream out) {
+        for (int i = 0; i < len; i++) {
+            out.write((byte) (0xFF & (data >>> (i << 3))));
+        }
+    }
+
     public static void writeUnsignedShortLittleEndian(int data, ByteArrayOutputStream out) {
         out.write((byte) (data & 0xFF));
         out.write((byte) ((data >>> 8) & 0xFF));
@@ -154,5 +161,4 @@ public abstract class ByteHelper {
     public static void writeFixedLengthBytesFromStart(byte[] data, int length, ByteArrayOutputStream out) {
         writeFixedLengthBytes(data, 0, length, out);
     }
-
 }

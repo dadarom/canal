@@ -14,6 +14,13 @@ public class LogPosition implements Cloneable, Comparable<LogPosition> {
     /* position in file */
     protected long   position;
 
+    /* GTID */
+    protected String serverUUID;
+    protected long   transcationId;
+
+    /* 和当前serverUUID相关的最后一个previousGtidStr */
+    protected String lastGtidInterval;
+
     /**
      * Binlog position init.
      * 
@@ -58,6 +65,22 @@ public class LogPosition implements Cloneable, Comparable<LogPosition> {
             // Never happend
             return null;
         }
+    }
+
+    public String getGtid() {
+        return String.format("%s:%s", serverUUID, transcationId);
+    }
+
+    public String getLastGtidInterval() {
+        return lastGtidInterval;
+    }
+
+    public String getServerUUID() {
+        return serverUUID;
+    }
+
+    public long getTranscationId() {
+        return transcationId;
     }
 
     /**

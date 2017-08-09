@@ -1,6 +1,7 @@
 package com.taobao.tddl.dbsync.binlog.event;
 
 import com.taobao.tddl.dbsync.binlog.LogBuffer;
+import com.taobao.tddl.dbsync.binlog.LogContext;
 import com.taobao.tddl.dbsync.binlog.LogEvent;
 
 /**
@@ -55,10 +56,10 @@ import com.taobao.tddl.dbsync.binlog.LogEvent;
  * </table>
  * Summing up the numbers above, we see that the total size of the common header
  * is 19 bytes.
- * 
- * @see mysql-5.1.60/sql/log_event.cc
+ *
  * @author <a href="mailto:changyuan.lh@taobao.com">Changyuan.lh</a>
  * @version 1.0
+ * @see mysql-5.1.60/sql/log_event.cc
  */
 public final class LogHeader {
 
@@ -74,7 +75,7 @@ public final class LogHeader {
      * of the BEGIN, which is logical as rollback may occur), except the COMMIT
      * query which has its real offset.
      */
-    protected long      logPos;
+    protected long logPos;
 
     /**
      * Timestamp on the master(for debugging and replication of
@@ -84,23 +85,25 @@ public final class LogHeader {
      * good replication (otherwise, we could have a query and its event with
      * different timestamps).
      */
-    protected long      when;
+    protected long when;
 
-    /** Number of bytes written by write() function */
-    protected int       eventLen;
+    /**
+     * Number of bytes written by write() function
+     */
+    protected int eventLen;
 
     /**
      * The master's server id (is preserved in the relay log; used to prevent
      * from infinite loops in circular replication).
      */
-    protected long      serverId;
+    protected long serverId;
 
     /**
      * Some 16 flags. See the definitions above for LOG_EVENT_TIME_F,
      * LOG_EVENT_FORCED_ROTATE_F, LOG_EVENT_THREAD_SPECIFIC_F, and
      * LOG_EVENT_SUPPRESS_USE_F for notes.
      */
-    protected int       flags;
+    protected int flags;
 
     /**
      * The value is set by caller of FD constructor and
@@ -109,18 +112,27 @@ public final class LogHeader {
      * the value is assigned from post_header_len[last] of the last seen FD
      * event.
      */
-    protected int       checksumAlg;
+    protected int  checksumAlg;
     /**
      * Placeholder for event checksum while writing to binlog.
      */
-    protected long      crc;        // ha_checksum
+    protected long crc;        // ha_checksum
+
+    /**
+     * the gtid info of this rows event belongs to,if exist
+     */
+    /* GTID={serverUUID}:{transcationId} */
+    protected String serverUUID;
+    protected long   transcationId;
+    /* 不暴露给client，server内部使用: gtid dump binlog */
+    protected String lastGtidInterval;
 
     /* for Start_event_v3 */
-    public LogHeader(final int type){
+    public LogHeader(final int type) {
         this.type = type;
     }
 
-    public LogHeader(LogBuffer buffer, FormatDescriptionLogEvent descriptionEvent){
+    public LogHeader(LogBuffer buffer, FormatDescriptionLogEvent descriptionEvent) {
         when = buffer.getUint32();
         type = buffer.getUint8(); // LogEvent.EVENT_TYPE_OFFSET;
         serverId = buffer.getUint32(); // LogEvent.SERVER_ID_OFFSET;
@@ -182,7 +194,8 @@ public final class LogHeader {
                 int versionSplit[] = new int[] { 0, 0, 0 };
                 FormatDescriptionLogEvent.doServerVersionSplit(serverVersion, versionSplit);
                 checksumAlg = LogEvent.BINLOG_CHECKSUM_ALG_UNDEF;
-                if (FormatDescriptionLogEvent.versionProduct(versionSplit) >= FormatDescriptionLogEvent.checksumVersionProduct) {
+                if (FormatDescriptionLogEvent.versionProduct(versionSplit)
+                    >= FormatDescriptionLogEvent.checksumVersionProduct) {
                     buffer.position(eventLen - LogEvent.BINLOG_CHECKSUM_LEN - LogEvent.BINLOG_CHECKSUM_ALG_DESC_LEN);
                     checksumAlg = buffer.getUint8();
                 }
@@ -208,7 +221,7 @@ public final class LogHeader {
          * BINLOG_CHECKSUM_ALG_UNDEF.
          */
         checksumAlg = descriptionEvent.getHeader().checksumAlg; // fetch
-                                                                // checksum alg
+        // checksum alg
         processCheckSum(buffer);
         /* otherwise, go on with reading the header from buf (nothing now) */
     }
@@ -274,5 +287,35 @@ public final class LogHeader {
         if (checksumAlg != LogEvent.BINLOG_CHECKSUM_ALG_OFF && checksumAlg != LogEvent.BINLOG_CHECKSUM_ALG_UNDEF) {
             crc = buffer.getUint32(eventLen - LogEvent.BINLOG_CHECKSUM_LEN);
         }
+    }
+
+    /************ GTID Info ***************/
+    public String getServerUUID() {
+        return serverUUID;
+    }
+
+    public long getTranscationId() {
+        return transcationId;
+    }
+
+    public String getLastGtidInterval() {
+        return lastGtidInterval;
+    }
+
+    /** 填充GTID相关的信息 */
+    public final void fillGtidInfo(LogContext context) {
+        GtidLogEvent gtid = context.getLastGTID();
+        if(gtid != null){
+            this.serverUUID = gtid.getServerUUID();
+            this.transcationId = gtid.getTranscationId();
+
+            if(context.getLastPreviousGtids() != null){
+                this.lastGtidInterval = context.getLastPreviousGtids().getLastGtidInterval(this.serverUUID);
+            }
+        }
+    }
+
+    public String getGTID() {
+        return String.format("%s:%s", serverUUID, transcationId);
     }
 }

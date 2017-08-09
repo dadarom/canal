@@ -9,6 +9,7 @@ import java.sql.Types;
 import java.util.BitSet;
 import java.util.List;
 
+import com.alibaba.otter.canal.parse.CanalParseConstants;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.slf4j.Logger;
@@ -71,6 +72,7 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
     public static final int             version             = 1;
     public static final String          BEGIN               = "BEGIN";
     public static final String          COMMIT              = "COMMIT";
+
     public static final Logger          logger              = LoggerFactory.getLogger(LogEventConvert.class);
 
     private volatile AviaterRegexFilter nameFilter;                                                          // 运行时引用可能会有变化，比如规则发生变化时
@@ -303,7 +305,8 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
     private Entry parseXidEvent(XidLogEvent event) {
         TransactionEnd transactionEnd = createTransactionEnd(event.getXid());
         Header header = createHeader(binlogFileName, event.getHeader(), "", "", null);
-        return createEntry(header, EntryType.TRANSACTIONEND, transactionEnd.toByteString());
+        Entry entry = createEntry(header, EntryType.TRANSACTIONEND, transactionEnd.toByteString());
+        return entry;
     }
 
     private Entry parseRowsEvent(RowsLogEvent event) {
@@ -633,6 +636,7 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
         headerBuilder.setServerenCode(UTF_8);// 经过java输出后所有的编码为unicode
         headerBuilder.setExecuteTime(logHeader.getWhen() * 1000L);
         headerBuilder.setSourceType(Type.MYSQL);
+
         if (eventType != null) {
             headerBuilder.setEventType(eventType);
         }
@@ -642,6 +646,18 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
         if (tableName != null) {
             headerBuilder.setTableName(tableName);
         }
+
+        // set GTID info
+        if(logHeader.getServerUUID() != null){
+            headerBuilder.setServerUUID(logHeader.getServerUUID());
+            headerBuilder.setTranscationId(logHeader.getTranscationId());
+
+            // GTID_INTERVAL塞入事务结束event;不必暴露给client,所以不塞入entry header
+            if(logHeader.getType() == LogEvent.XID_EVENT){
+                headerBuilder.addProps(createSpecialPair(CanalParseConstants.GTID_INTERVAL, logHeader.getLastGtidInterval()));
+            }
+        }
+
         headerBuilder.setEventLength(logHeader.getEventLen());
         return headerBuilder.build();
     }
@@ -754,5 +770,4 @@ public class LogEventConvert extends AbstractCanalLifeCycle implements BinlogPar
     public void setFilterRows(boolean filterRows) {
         this.filterRows = filterRows;
     }
-
 }

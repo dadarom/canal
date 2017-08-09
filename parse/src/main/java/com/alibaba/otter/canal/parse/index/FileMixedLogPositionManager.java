@@ -45,8 +45,7 @@ public class FileMixedLogPositionManager extends AbstractLogPositionManager {
 
     private ScheduledExecutorService executorService;
 
-    private final LogPosition        nullPosition = new LogPosition() {
-                                                  };
+    private final LogPosition        nullPosition = new LogPosition() {};
 
     private MemoryLogPositionManager memoryLogPositionManager;
 
@@ -133,11 +132,13 @@ public class FileMixedLogPositionManager extends AbstractLogPositionManager {
         if (logPosition != null) {
             return logPosition;
         }
-        logPosition = loadDataFromFile(dataFileCaches.get(destination));
-        if (logPosition == null) {
-            return nullPosition;
-        }
-        return logPosition;
+// bug fix
+//        logPosition = loadDataFromFile(dataFileCaches.get(destination));
+//        if (logPosition == null) {
+//            return nullPosition;
+//        }
+//        return logPosition;
+        return loadDataFromFile(dataFileCaches.get(destination));
     }
 
     @Override

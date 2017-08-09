@@ -137,6 +137,11 @@ public class LocalBinLogConnection implements ErosaConnection {
         }
     }
 
+    @Override public void dump(String binlogfilename, Long binlogPosition, String masterUUID, long transcationId,
+                               String gtidInterval, SinkFunction func) throws IOException {
+        //TODO
+    }
+
     public void dump(long timestampMills, SinkFunction func) throws IOException {
         List<File> currentBinlogs = binlogs.currentBinlogs();
         File current = currentBinlogs.get(currentBinlogs.size() - 1);

@@ -1,3 +1,9 @@
 release link : https://alibaba.github.com/canal/release.html
 
 download link : https://github.com/alibaba/canal/releases
+
+1. GTID支持
+
+2. big event的解析优化
+2.1 有限个packet支持超大binlog event
+2.2 有些情况下，支持skip而非parse
